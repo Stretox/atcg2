@@ -9,12 +9,19 @@ in VS_OUT
     vec3 points[4];
 }gs_in[];
 
+
 vec3 hermite(float u, vec3 p0, vec3 p1, vec3 t0, vec3 t1)
 {
-    vec3 p;
-    //
+    float H0 = (1.0 - u) * (1.0 - u) * (1.0 + 2.0 * u);
+    float H1 = u * (1.0 - u) * (1.0 - u);
+    float H2 = u * u * (3.0 - 2.0 * u);
+    float H3 = u * u * (u - 1.0);
+
+    vec3 p = p0 * H0 + t0 * H1 + p1 * H2 + t1 * H3;
+
     return p;
 }
+
 
 uniform int discretization;
 uniform mat4 P;

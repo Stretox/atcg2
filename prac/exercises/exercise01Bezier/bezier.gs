@@ -11,9 +11,16 @@ in VS_OUT
 
 vec3 bezier(float u, vec3 p0, vec3 p1, vec3 p2, vec3 p3)
 {
-    vec3 p;
-    //
-    return p;
+    const mat4 M = mat4( 1.0, -3.0,  3.0, -1.0,  
+                         0.0,  3.0, -6.0,  3.0,   
+                         0.0,  0.0,  3.0, -3.0,   
+                         0.0,  0.0,  0.0,  1.0);  
+
+    vec4 T = vec4(1.0, u, u * u, u * u * u);
+
+    mat4x3 P = mat4x3(p0, p1, p2, p3);  
+
+    return P * (T * M);
 }
 
 uniform int discretization;
