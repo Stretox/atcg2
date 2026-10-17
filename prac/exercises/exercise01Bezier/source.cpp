@@ -186,7 +186,9 @@ public:
             //   world_pos is the last point you placed (i.e. points.back())
 
             //
-
+            glm::vec3 last_point = points[points.size() - 2];
+            glm::vec3 new_point = points.back() + (points.back() - last_point);
+            points.push_back(new_point);
             // After we first subdivided a curve, the new start point is the last endpoint. Therefore, start at 1
             continuity_index = 1;
         }
