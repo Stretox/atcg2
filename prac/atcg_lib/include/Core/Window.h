@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <functional>
+#include <cstdint> // Required for building the project on Linux (install Linux (I use arch btw))
 
 #include <Events/Event.h>
 

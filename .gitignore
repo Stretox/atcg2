@@ -1,2 +1,4 @@
 .vscode
 prac/build/*
+prac/bin/*
+prac/imgui.ini
