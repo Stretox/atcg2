@@ -20,7 +20,7 @@ void ImGuiLayer::onAttach()
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; //Needs to be commented out otherwise print Warning every frame on linux
 
     ImGui::StyleColorsDark();
 
