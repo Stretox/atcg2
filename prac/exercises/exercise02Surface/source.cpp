@@ -64,11 +64,47 @@ public:
         float coefficients[4];
     };
 
+    float _calcBinomialCoefficient(float k, float n)
+    {
+        float n_fac = tgamma(n+1); // See https://stackoverflow.com/questions/50132863/is-there-any-built-in-factorial-function-in-c aka tgamma works as a factorial function
+
+        float k_fac = tgamma(k+1);
+
+        float nmink_fac = tgamma((n-k)+1);
+
+        return n_fac/(k_fac*nmink_fac);
+
+    }
+
+    std::vector<float> _calcBezier4Val(float t, int degree){
+        std::vector<float> coefficients(degree + 1);
+
+        for (int i = 0; i < degree; i++){
+            float binom = _calcBinomialCoefficient(i, degree);
+            coefficients[i] = binom * pow(t, i) * pow ((1-t),(degree-i));
+        }
+        return coefficients;
+    
+    }
+
     BezierBase getBezierCoefficients(float t)
     {
         BezierBase base;
 
+        
+        
+
         // TODO
+        
+        //lets just say for simplicity that we hardcode the polynomials to degree 4
+     
+        int degree = 4;
+
+        std::vector<float> coefficients = _calcBezier4Val(t, degree);
+        for (int i = 0; i < degree; i++){
+            base.coefficients[i] = coefficients[i];
+        }
+
         // 
 
         return base;
@@ -81,6 +117,9 @@ public:
         uint32_t m = 4, n = 4;
 
         // TODO
+
+        
+
         // 
 
         return points;
@@ -124,17 +163,17 @@ public:
         t += delta_time;
 
         // Comment in the following code to start the animation of the surface:
-        // for(uint32_t i = 0; i < control_polygon.size(); ++i)
-        // {
-        //     control_polygon[i][2] = std::sin(2.0f * static_cast<float>(M_PI) * frequencies[i] * t);
-        // }
+        for(uint32_t i = 0; i < control_polygon.size(); ++i)
+        {
+            control_polygon[i][2] = std::sin(2.0f * static_cast<float>(M_PI) * frequencies[i] * t);
+        }
 
-        // control_polygon_mesh                   = triangulate(control_polygon);
-        // std::vector<atcg::Mesh::Point> surface = calculate_surface(control_polygon, linspace(0, 1, 100));
-        // mesh                                   = triangulate(surface);
+        control_polygon_mesh                   = triangulate(control_polygon);
+        std::vector<atcg::Mesh::Point> surface = calculate_surface(control_polygon, linspace(0, 1, 100));
+        mesh                                   = triangulate(surface);
 
-        // control_polygon_mesh->uploadData();
-        // mesh->uploadData();
+        control_polygon_mesh->uploadData();
+        mesh->uploadData();
 
         camera_controller->onUpdate(delta_time);
 
