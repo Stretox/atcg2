@@ -91,36 +91,54 @@ public:
     {
         BezierBase base;
 
-        
-        
-
         // TODO
         
         //lets just say for simplicity that we hardcode the polynomials to degree 4
-     
-        int degree = 4;
 
-        std::vector<float> coefficients = _calcBezier4Val(t, degree);
-        for (int i = 0; i < degree; i++){
-            base.coefficients[i] = coefficients[i];
-        }
+        float s = 1.0f - t;
 
-        // 
+        base.coefficients[0] = s * s * s;
+        base.coefficients[1] = 3.0f * t * s * s;
+        base.coefficients[2] = 3.0f * t * t * s;
+        base.coefficients[3] = t * t * t;
+
+        // int degree = 4;
+
+        // std::vector<float> coefficients = _calcBezier4Val(t, degree);
+        // for (int i = 0; i < degree; i++){
+        //     base.coefficients[i] = coefficients[i];
+        // }
+
+        // // 
 
         return base;
     }
 
     std::vector<atcg::Mesh::Point> calculate_surface(const std::vector<atcg::Mesh::Point>& control_points,
-                                                     const std::vector<float>& samples)
+                                                    const std::vector<float>& samples)
     {
         std::vector<atcg::Mesh::Point> points;
-        uint32_t m = 4, n = 4;
+        uint32_t m = 4, n = 4;   
 
-        // TODO
+        points.reserve(samples.size() * samples.size());
 
-        
+        for(float u : samples)
+        {
+            BezierBase Bu = getBezierCoefficients(u);
 
-        // 
+            for(float v : samples)
+            {
+                BezierBase Bv = getBezierCoefficients(v);
+
+                atcg::Mesh::Point q(0.0f, 0.0f, 0.0f);
+
+                for(uint32_t i = 0; i < m; ++i)
+                    for(uint32_t j = 0; j < n; ++j)
+                        q += control_points[i * n + j] * (Bu.coefficients[i] * Bv.coefficients[j]);
+
+                points.push_back(q);
+            }
+        }
 
         return points;
     }

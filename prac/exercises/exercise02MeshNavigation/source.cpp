@@ -50,7 +50,37 @@ public:
 
         // Process vertices as long as the queue is not empty and the target is not found
         while(!queue.empty())
-        {
+        {   
+            QueueEntry current_entry = queue.top();
+            queue.pop();
+
+            double current_d = current_entry.first;
+            VertexHandle current_vertex = current_entry.second;
+
+            if(current_d > mesh->property(property_distance,current_vertex))
+                continue;
+            
+            if(current_vertex == vh_target){
+                distance = current_d;
+                mesh->property(property_distance, vh_target) = distance;
+                return distance;
+            }
+            
+            for(auto voh : mesh->voh_range(current_vertex)) 
+            {
+                VertexHandle neighbor_vh = mesh->to_vertex_handle(voh);
+                double edge_length = mesh->calc_edge_length(voh);
+                double new_dist = current_d + edge_length;
+
+                if(new_dist < mesh->property(property_distance, neighbor_vh))
+                {
+                    mesh->property(property_distance, neighbor_vh) = new_dist;
+                    mesh->property(property_previous, neighbor_vh) = current_vertex;
+                    queue.push({new_dist, neighbor_vh});
+                }
+            }
+            
+
             // TODO: Implement the loop body
             // Hints:
             // - Loop invariant: all vertices in the queue have a valid distance, which is sum of the lengths
@@ -69,6 +99,7 @@ public:
             // - The mesh class provides different iterators to iterate over vertices, edges, faces, etc.
 
             // 
+
         }
 
         return distance;
@@ -82,6 +113,12 @@ public:
         std::vector<VertexHandle> result_path;
         VertexHandle current_vh = target_vh;
         result_path.push_back(target_vh);
+
+        while(mesh->property(property_distance, current_vh) != 0){
+            current_vh = mesh->property(property_previous, current_vh);
+            result_path.push_back(current_vh);
+        }
+
 
         // TODO: Implement this
         // Hints:
