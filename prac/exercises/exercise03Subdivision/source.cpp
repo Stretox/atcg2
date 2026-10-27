@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <algorithm>
+#include <math.h>
 
 class Exercise03Layer : public atcg::Layer
 {
@@ -19,17 +20,24 @@ public:
         // TODO: sqrt(3) subdivision
         mesh->request_edge_status();
         mesh->request_vertex_status();
-        uint32_t num_features = mesh->find_feature_edges();
+        uint32_t num_features = mesh->find_feature_edges(); // Finds all edges with dihedral angle (sharp edges)
         std::cout << "Found " << num_features << " feature edges\n";
 
-        size_t nv = mesh->n_vertices();
-        size_t ne = mesh->n_edges();
-        size_t nf = mesh->n_faces();
+        size_t nv = mesh->n_vertices(); //number vertices
+        size_t ne = mesh->n_edges(); // number edges
+        size_t nf = mesh->n_faces(); // number faces
 
-        auto eend = mesh->edges_end();
-        auto fend = mesh->faces_end();
+        auto eend = mesh->edges_end(); // End iterator for edges
+        auto fend = mesh->faces_end(); // End iterator for faces
 
         auto new_pos_property = OpenMesh::makeTemporaryProperty<OpenMesh::VertexHandle, atcg::Mesh::Point>(*mesh.get());
+
+        // New positions should only be influenced by the old_vertrecies so the new vertecies will uphold already standing edges/splines
+        // We apply only AFTER subdivision tho
+
+        int i = 0;
+
+        int k = 0;
 
         // Calculate new position of old vertices
         for(auto v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it)
@@ -48,8 +56,48 @@ public:
             ///           - make sure to handle boundary (mesh->is_boundary) and feature (v_it->feature()) vertices
             ///           accordingly
 
+            auto valence = (*v_it).valence();
+            
+            float weight_beta = 0.0;
+            
+            if (v_it->feature() | v_it->is_boundary()){
+                
+                std::cout << "NAHNAHNAH" << std::endl;
+                    
+                    
+                }
+            else{
+                weight_beta = (4.0f - 2.0f * std::cos(2.0f * M_PI / valence)) / (9.0f * valence);
+            }
+
+            float weight_old_pos = 1 - valence * weight_beta;
+
+            k += valence;
+
+            i++;
+
+            std::cout << "Weight" << std::to_string(weight_beta) << std::endl;
+            std::cout << "Old POS" << std::to_string(weight_old_pos) << std::endl;
+
+            atcg::Mesh::Point average(0.0f,0.0f,0.0f); //average poition of ring verts
+
+            for (auto vv_it = v_it->vertices().begin(); vv_it != v_it->vertices().end();++vv_it) 
+            {
+                atcg::Mesh::Point p = mesh->point(*vv_it);   // or: (*vv_it).point()
+
+                std::transform(average.begin(), average.end(), p.begin(), average.begin(), std::plus<float>());
+
+                std::cout << average[0] << " " << average[1] << " " << average[2] << std::endl;
+            }
+
+            atcg::Mesh::Point new_pos = weight_old_pos* mesh->point(*v_it) + weight_beta*average;
+
+            new_pos_property[*v_it] = new_pos;
+
             // 
         }
+
+        std::cout << k/i << std::endl;
 
         // Split faces
         for(auto f_it = mesh->faces_begin(); f_it != fend; ++f_it)
