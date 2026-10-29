@@ -35,10 +35,6 @@ public:
         // New positions should only be influenced by the old_vertrecies so the new vertecies will uphold already standing edges/splines
         // We apply only AFTER subdivision tho
 
-        int i = 0;
-
-        int k = 0;
-
         // Calculate new position of old vertices
         for(auto v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it)
         {
@@ -58,48 +54,42 @@ public:
 
             auto valence = (*v_it).valence();
             
-            float weight_beta = 0.0;
+            float weight_beta = 0.0f;
             
-            if (v_it->feature() | v_it->is_boundary()){
+            if (!v_it->feature() || !v_it->is_boundary()){
                 
-                std::cout << "NAHNAHNAH" << std::endl;
-                    
-                    
-                }
-            else{
                 weight_beta = (4.0f - 2.0f * std::cos(2.0f * M_PI / valence)) / (9.0f * valence);
+                    
             }
+            
 
             float weight_old_pos = 1 - valence * weight_beta;
 
-            k += valence;
+            // std::cout << "Weight" << std::to_string(weight_beta) << std::endl;
+            // std::cout << "Old POS" << std::to_string(weight_old_pos) << std::endl;
 
-            i++;
-
-            std::cout << "Weight" << std::to_string(weight_beta) << std::endl;
-            std::cout << "Old POS" << std::to_string(weight_old_pos) << std::endl;
-
+            // Iterate over ring and calc the average position of the neighbor verts
             atcg::Mesh::Point average(0.0f,0.0f,0.0f); //average poition of ring verts
-
+            
             for (auto vv_it = v_it->vertices().begin(); vv_it != v_it->vertices().end();++vv_it) 
             {
                 atcg::Mesh::Point p = mesh->point(*vv_it);   // or: (*vv_it).point()
 
-                std::transform(average.begin(), average.end(), p.begin(), average.begin(), std::plus<float>());
+                average += p;
 
-                std::cout << average[0] << " " << average[1] << " " << average[2] << std::endl;
+                // std::cout << average[0] << " " << average[1] << " " << average[2] << std::endl;
             }
 
+            // actually calc the new position
             atcg::Mesh::Point new_pos = weight_old_pos* mesh->point(*v_it) + weight_beta*average;
 
+            // save a new vertex position for later
             new_pos_property[*v_it] = new_pos;
 
             // 
         }
 
-        std::cout << k/i << std::endl;
-
-        // Split faces
+        // // Split faces
         for(auto f_it = mesh->faces_begin(); f_it != fend; ++f_it)
         {
             /// Exercise: Please implement the face splits
@@ -109,11 +99,38 @@ public:
             ///           - split the faces at the centroid of each face (mesh->split)
             ///
 
+            atcg::Mesh::Point middle(0.0f,0.0f,0.0f); //middle point of the edge
+
+            size_t vertex_count = 0.0f;
+
+            for (auto v_it = f_it->vertices().begin(); v_it != f_it->vertices().end();++v_it) 
+            {
+                atcg::Mesh::Point p = mesh->point(*v_it);   // or: (*vv_it).point()
+
+                middle += p;
+                
+                vertex_count += 1.0f;
+            }
+
+            if (!(vertex_count == 0)){middle = middle / vertex_count;}
+
+            OpenMesh::VertexHandle new_vh = mesh->add_vertex(middle);
+            
+            mesh->split(f_it, new_vh);
+
             // 
         }
 
+        
+        // for(auto v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it)
+        // {
+        //     if(mesh->is_boundary(*v_it) || v_it->feature()) continue;
+        //     mesh->point(*v_it) = new_pos_property[*v_it];
+        // }
+
         // Set new vertex positions
-        for(auto v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it)
+        size_t current_index = 0;
+        for(auto v_it = mesh->vertices_begin(); v_it != mesh->vertices_end() && current_index < nv; ++v_it, ++current_index)
         {
             if(mesh->is_boundary(*v_it) || v_it->feature()) continue;
             mesh->point(*v_it) = new_pos_property[*v_it];
@@ -129,7 +146,10 @@ public:
             ///           - make sure you don't flip an edge which is a feature edge which can be checked with
             ///           e_it->feature
 
-            // 
+            if (!mesh->status(e).feature() && mesh->is_flip_ok(e)) {
+                mesh->flip(e);
+            }
+
         }
 
         // Update rendering
@@ -193,6 +213,10 @@ public:
             {
                 subdivide_mesh(mesh);
             }
+
+            // added the vertex and edge glyphs for some fun isights into the subdivision
+            ImGui::Checkbox("Render Vertices", &render_points);
+            ImGui::Checkbox("Render Edges", &render_edges);
 
             ImGui::End();
         }
