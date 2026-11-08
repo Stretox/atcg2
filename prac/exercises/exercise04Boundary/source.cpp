@@ -26,9 +26,35 @@ public:
         ///           in practice you wouldn't do it this way but this is about the learning experience.
 
         // 
+        
+        size_t ne = mesh->n_edges(); // number edges
+        size_t nf = mesh->n_faces(); // number faces
 
-        // Dummy solution
-        return Eigen::SparseMatrix<int>();
+        Eigen::SparseMatrix<int> d2(ne, nf);
+
+        std::vector<Eigen::Triplet<int>> triplets;
+
+        for (auto f_it = mesh->faces_begin(); f_it != mesh->faces_end(); ++f_it)
+        {
+            for (auto e : mesh->fe_range(f_it))  // Iterate over edges of face
+            {
+                auto he0 = mesh->halfedge_handle(e, 0);  // First halfedge
+                auto he1 = mesh->halfedge_handle(e, 1);  // Second halfedge
+
+                // check halfedge belonging to current face
+                if (mesh->face_handle(he0) == *f_it){
+                    triplets.push_back({e.idx(), f_it->idx(), 1});}  // good Orientation
+                if (mesh->face_handle(he1) == *f_it)
+                    triplets.push_back({e.idx(), f_it->idx(), -1});  // nah orientation
+            }
+        }
+
+        d2.setFromTriplets(triplets.begin(), triplets.end());
+
+        // std::cout << "d2 shape: (" << d2.rows() << "," << d2.cols() << ")" << std::endl; //!!DEBUG
+
+        // COOOOL solution
+        return d2;
     }
 
     Eigen::VectorXi detect_boundary(const Eigen::SparseMatrix<int>& M, const Eigen::VectorXi& v)
@@ -36,6 +62,9 @@ public:
         /// Exercise: -Implement the slicing of a mesh with a vector v
         ///           -The output should be a vector with n_vertices() entries where non-boundary vertices have value 0
         ///           -OpenMesh of course has methods to get boundary vertices directly. DO NOT use those.
+
+        Eigen::VectorXi edge_sums = M * v;
+        return (edge_sums.array() == 1).cast<int>();
 
         // 
 
@@ -50,8 +79,18 @@ public:
 
         // 
 
-        // Dummy solution
-        return Eigen::VectorXi();
+        Eigen::VectorXi edge_count = Eigen::VectorXi::Zero(M.rows());
+
+        std::cout << "M.rows(): " << M.rows() << std::endl;
+
+        for (int i = 0; i < M.rows(); ++i){
+
+            for (int k = 0; k < M.cols(); ++k) // Obviously we have more than two faces other than the example... -_-
+                edge_count[i] += M.coeff(i, k);
+        }
+
+        // Cooked solution
+        return edge_count;
     }
 
     Eigen::VectorXi compute_plane_cut(const std::shared_ptr<atcg::Mesh>& mesh, const glm::vec3& plane_normal)
@@ -64,16 +103,55 @@ public:
 
         // 
 
-        // Dummy solution
+         Eigen::VectorXi cut_faces = Eigen::VectorXi::Zero(mesh->n_faces());
+
+        for (auto f_it = mesh->faces_begin(); f_it != mesh->faces_end(); ++f_it) {
+            // check if any vertex is on opposite sides of plane
+            bool has_positive = false;
+            bool has_negative = false;
+
+            for (auto fvh : mesh->fv_range(*f_it)) { // Iterate over face vertices
+                auto pos = mesh->point(fvh);
+                float side = glm::dot(glm::vec3(pos[0], pos[1], pos[2]), plane_normal);
+                if (side >= 0) {has_positive = true;}
+                if (side < 0) {has_negative = true;}
+            }
+
+            if (has_positive && has_negative) {
+                cut_faces[(*f_it).idx()] = 1;  // face is cut by plane
+            }
+        }
+
+        return cut_faces;
+
+
+        // Unused "solution"
         return Eigen::VectorXi();
     }
 
+    // 🖌️🖌️🖌️🖌️
     void color_mesh(const std::shared_ptr<atcg::Mesh>& mesh, const Eigen::VectorXi& sum)
     {
-        /// Exercise: -Color all vertices that make up the boundary edges red
-        ///           -This framework does not support to color in edges directly, so you have to color in the
-        ///           respective vertices -sum contains the output of 'compute_boundary_edges'.
+        /// Exercise: - Color all vertices that make up the boundary edges red
+        ///           - This framework does not support to color in edges directly, so you have to color in the
+        ///           respective vertices 
+        ///           - sum contains the output of 'compute_boundary_edges'.
         ///           - Again, DO NOT use OpenMesh functions to detect boundaries.
+
+        std::cout << "sum shape: (" << sum.size() << ")" << std::endl;
+
+        for (auto v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it){
+            // Coloring verts of edge         
+            for (auto ve_it = mesh->ve_iter(*v_it); ve_it.is_valid(); ++ve_it) {
+                atcg::Mesh::EdgeHandle eh = *ve_it;
+                
+                if (sum[eh.idx()] == 1){
+                mesh->set_color(*v_it, atcg::Mesh::Color(255, 0, 0));
+                break;
+                }
+            }
+
+        }
 
         // 
     }
